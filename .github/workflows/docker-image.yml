@@ -1,0 +1,36 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker image
+      run: docker build . --file app.Dockerfile --tag my-image-name:$(date +%s)
+
+    - name: Build db
+      run: docker-compose run --rm app rails db:setup
+
+    - name: Start server
+      run: docker-compose up -d
+
+    - name: Rubocop
+      run: docker-compose run --rm app bundle exec rubocop --parallel
+
+    - name: Bundle audit
+      run: docker-compose run --rm app bundle exec bundle-audit --update
+
+    - name: Brakeman
+      run: docker-compose run --rm app bundle exec brakeman -q -w2
+
+    - name: Rspec
+      run: docker-compose run --rm app bundle exec rspec
